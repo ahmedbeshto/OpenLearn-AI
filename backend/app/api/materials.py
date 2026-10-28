@@ -187,3 +187,61 @@ async def get_material_status_handler(
         material_id=material.id,
         status=material.status,
     )
+
+
+@router.post(
+    "/{material_id}/process",
+    response_model=MaterialAcceptedResponse,
+    status_code=http_status.HTTP_202_ACCEPTED,
+    responses=_MATERIAL_ERROR_RESPONSES,
+)
+    
+async def reprocess_material_handler(
+    course_id: uuid.UUID,
+    material_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    _: dict[str, Any] = Depends(require_instructor),
+    db: AsyncSession = Depends(get_db),
+) -> MaterialAcceptedResponse:
+    """Reprocess an existing material (Instructor & Course Owner gated, 3-try manual retry budget)."""
+    course = await require_owned_course(db, course_id, user)
+    material = await get_material_by_id(db, material_id)
+    
+    if material is None or material.course_id != course.id:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail="Material not found in this course",
+        )
+
+    # التحقق من ميزانية إعادة المحاولة (3 محاولات يدوية كحد أقصى)
+    retry_count = getattr(material, "retry_count", 0)
+    if retry_count >= 3:
+        raise HTTPException(
+            status_code=http_status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Maximum manual retry budget (3 tries) exceeded for this material.",
+        )
+
+    material.retry_count = retry_count + 1
+    material.status = "pending"
+    await db.commit()
+    await db.refresh(material)
+
+    try:
+        job_id = await enqueue_material_processing(
+            material.id,
+            material.s3_key,
+            material.course_id,
+            material.uploaded_by,
+        )
+    except Exception:
+        logger.exception(
+            "material_reprocessing_enqueue_failed",
+            material_id=str(material.id),
+            course_id=str(material.course_id),
+        )
+        raise
+
+    return MaterialAcceptedResponse(
+        material_id=material.id,
+        job_id=job_id,
+    )
