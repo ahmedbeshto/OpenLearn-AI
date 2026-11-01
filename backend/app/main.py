@@ -9,7 +9,7 @@ from app.api.materials import (
     status_router as material_status_router,
 )
 from app.api.users import router as users_router
-
+from app.api.retrieval import router as retrieval_router
 from app.config import settings
 from app.observability import setup_observability, setup_metrics
 from app.services.auth.user_service import (
