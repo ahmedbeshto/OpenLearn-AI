@@ -52,7 +52,6 @@ async def keycloak_identity_error_handler(
 ) -> JSONResponse:
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
-
 @app.exception_handler(DuplicateEmailError)
 async def duplicate_email_error_handler(
     request: Request,
