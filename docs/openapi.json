@@ -1023,6 +1023,74 @@
         ]
       }
     },
+    "/v1/courses/{course_id}/materials/{material_id}/process": {
+      "post": {
+        "description": "Reprocess an existing material (Instructor & Course Owner gated, 3-try manual retry budget).",
+        "operationId": "reprocess_material_handler_v1_courses__course_id__materials__material_id__process_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "material_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Material Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialAcceptedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not authenticated (missing or invalid bearer token)"
+          },
+          "403": {
+            "description": "Insufficient permissions (instructor role and course ownership required)"
+          },
+          "404": {
+            "description": "No local user for the authenticated identity, or course does not exist"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reprocess Material Handler",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
     "/v1/materials/{material_id}/status": {
       "get": {
         "operationId": "get_material_status_handler_v1_materials__material_id__status_get",
